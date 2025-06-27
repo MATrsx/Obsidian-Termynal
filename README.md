@@ -83,7 +83,7 @@ A highly optimized terminal animation library designed specifically for Obsidian
 
 ````markdown
 ```dataviewjs
-const input = {
+await dv.view('termynal', {
     title: 'My Terminal Demo',
     theme: 'macos',
     autoStart: true,
@@ -93,7 +93,7 @@ const input = {
         { type: 'input', text: 'ls -la' },
         { type: 'output', text: 'total 8\ndrwxr-xr-x  3 user  staff   96 Jan  1 12:00 .\ndrwxr-xr-x  4 user  staff  128 Jan  1 12:00 ..' }
     ]
-};
+});
 ```
 ````
 
@@ -101,7 +101,7 @@ const input = {
 
 ````markdown
 ```dataviewjs
-const input = {
+await dv.view('termynal', {
     title: 'Advanced Terminal Demo',
     theme: 'ubuntu',
     startDelay: 1000,
@@ -132,7 +132,7 @@ const input = {
         { type: 'comment', text: '# Starting development server...' },
         { type: 'output', text: 'Server running on http://localhost:3000' }
     ]
-};
+});
 ```
 ````
 
@@ -482,7 +482,7 @@ MIT License - See the original [Termynal.js license](https://github.com/ines/ter
 ### Git Workflow Demo
 ````markdown
 ```dataviewjs
-const input = {
+await dv.view('termynal', {
     title: 'Git Workflow',
     theme: 'ubuntu',
     lines: [
@@ -495,14 +495,14 @@ const input = {
         { type: 'output', text: '[feature/new-component abc1234] Add new component\n 1 file changed, 25 insertions(+)' },
         { type: 'success', text: '✓ Changes committed successfully!' }
     ]
-};
+});
 ```
 ````
 
 ### Package Installation Demo
 ````markdown
 ```dataviewjs
-const input = {
+await dv.view('termynal', {
     title: 'Package Manager',
     theme: 'macos',
     showControls: true,
@@ -522,7 +522,7 @@ const input = {
         { type: 'comment', text: '# Server starting...' },
         { type: 'output', text: 'Server running on port 3000' }
     ]
-};
+});
 ```
 ````
 
