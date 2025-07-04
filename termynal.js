@@ -31,6 +31,9 @@ const DEFAULT_CONFIG = {
     defaultPromptColor: '#a2a2a2',      // Default prompt color
     height: 'auto',                     // Terminal height
     width: '100%',                      // Terminal width
+    lazyLoading: false,                 // Toggle lazy loading
+    intersectionThreshold: 0.1,         // Threshold for Intersection Observer
+    rootMargin: '50px',                 // Margin for Intersection Observer
     lines: []                           // Array of line objects to animate
 };
 
@@ -221,7 +224,7 @@ class TermynalStyleManager {
                 color: var(--color-text-subtle);
             }
 
-            /* Prompt-Farben über CSS Custom Properties */
+            /* Prompt colors */
             .termynal-line[data-ty-prompt-color]:before {
                 color: var(--prompt-color) !important;
             }
@@ -291,18 +294,92 @@ class TermynalStyleManager {
                 padding: 100px 40px 40px;
                 font-size: 16px;
             }
-            /* Responsive design */
+            /* Lazy placeholder */
+            .termynal-lazy-placeholder {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 200px;
+                background: var(--color-bg);
+                border-radius: 8px;
+                border: 2px dashed var(--color-text-subtle);
+                opacity: 0.8;
+                transition: all 0.3s ease;
+            }
+
+            .termynal-lazy-placeholder:hover {
+                opacity: 1;
+                border-color: var(--color-accent);
+            }
+
+            .termynal-lazy-content {
+                text-align: center;
+                color: var(--color-text-subtle);
+            }
+
+            .termynal-lazy-icon {
+                font-size: 48px;
+                margin-bottom: 16px;
+                opacity: 0.6;
+                animation: termynal-lazy-pulse 2s infinite;
+            }
+
+            .termynal-lazy-text {
+                font-size: 16px;
+                font-weight: 500;
+                margin-bottom: 8px;
+                color: var(--color-text);
+            }
+
+            .termynal-lazy-info {
+                font-size: 12px;
+                opacity: 0.7;
+            }
+
+            @keyframes termynal-lazy-pulse {
+                0%, 100% { transform: scale(1); opacity: 0.6; }
+                50% { transform: scale(1.05); opacity: 0.8; }
+            }
+
+            /* Lazy loading animation */
+            .termynal-lazy-loading {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: var(--color-accent);
+                color: var(--color-bg);
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 10px;
+                animation: termynal-lazy-fade 2s ease-in-out;
+            }
+
+            @keyframes termynal-lazy-fade {
+                0% { opacity: 0; transform: translateY(-10px); }
+                50% { opacity: 1; transform: translateY(0); }
+                100% { opacity: 0; transform: translateY(-10px); }
+            }
+
+            /* Responsive styles */
             @media (max-width: 768px) {
+                .termynal-lazy-icon {
+                    font-size: 32px;
+                    margin-bottom: 12px;
+                }
+                .termynal-lazy-text {
+                    font-size: 14px;
+                }
+                .termynal-lazy-info {
+                    font-size: 11px;
+                }
                 .obsidian-termynal {
                     font-size: 12px;
                     padding: 60px 15px 15px;
                 }
-                
                 .termynal-controls {
                     flex-direction: column;
                     gap: 5px;
                 }
-                
                 .termynal-progress-info {
                     flex-direction: column;
                     gap: 5px;
@@ -949,6 +1026,147 @@ class TermynalAnimator {
     }
 }
 
+
+/**
+ * Lazy Loading Manager - manages the lazy loading of the terminal
+ * Handles visibility checks and initialization
+ */
+class LazyLoadingManager {
+    /**
+     * Constructor for the LazyLoadingManager class
+     * @param {ObsidianTermynal} termynal - The ObsidianTermynal instance this manager belongs to
+     */
+    constructor(termynal) {
+        this.termynal = termynal;
+        this.observer = null;
+        this.isVisible = false;
+        this.hasInitialized = false;
+        this.pendingStart = false;
+    }
+
+    /**
+     * Initialize the lazy loading manager
+     * This method will create an IntersectionObserver and set up the placeholder element
+     */
+    init() {
+        if (!this.termynal.config.lazyLoading) return;
+
+        this.observer = new IntersectionObserver(
+            this.handleIntersection.bind(this),
+            {
+                threshold: this.termynal.config.intersectionThreshold,
+                rootMargin: this.termynal.config.rootMargin
+            }
+        );
+
+        this.observer.observe(this.termynal.container);
+        this.setupPlaceholder();
+    }
+
+    /**
+     * Setup the placeholder element for the lazy loaded terminal
+     * This element will be shown until the terminal is initialized
+     */
+    setupPlaceholder() {
+        const placeholder = this.termynal.$('div', {
+            className: 'termynal-lazy-placeholder',
+            innerHTML: `
+                <div class="termynal-lazy-content">
+                    <div class="termynal-lazy-icon">📺</div>
+                    <div class="termynal-lazy-text">Terminal is loading...</div>
+                    <div class="termynal-lazy-info">${this.termynal.config.lines.length} lines loaded</div>
+                </div>
+            `
+        });
+
+        this.termynal.container.appendChild(placeholder);
+        this.termynal.domCache.set('placeholder', placeholder);
+    }
+
+    /**
+     * Handle intersection event
+     * This method will initialize the terminal if it is visible and not already initialized
+     * @param {IntersectionObserverEntry[]} entries - IntersectionObserver entries
+     */
+    handleIntersection(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !this.hasInitialized) {
+                this.isVisible = true;
+                this.initializeTerminal();
+            }
+        });
+    }
+
+    /**
+     * Initialize the terminal
+     * This method will remove the placeholder element and initialize the terminal
+     * @returns {Promise<void>}
+     */
+    async initializeTerminal() {
+        if (this.hasInitialized) return;
+
+        this.hasInitialized = true;
+
+        console.log("Terminal initialisiert");
+        
+        const placeholder = this.termynal.domCache.get('placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+
+        this.termynal.setupContainer();
+        
+        this.termynal.emit('lazyLoaded', {
+            linesCount: this.termynal.config.lines.length,
+            timestamp: Date.now()
+        });
+
+        if (this.termynal.config.autoStart) {
+            if (this.pendingStart) {
+                await this.termynal.start();
+                this.pendingStart = false;
+            } else {
+                this.termynal.start();
+            }
+        } else {
+            this.termynal.renderer.renderStartButton();
+        }
+    }
+
+    /**
+     * Schedule the start of the terminal
+     * This method will start the terminal if it is initialized or schedule the start
+     * if it is not initialized yet
+     * @returns {Promise<void>}
+     */
+    scheduleStart() {
+        if (this.hasInitialized) {
+            return this.termynal.start();
+        } else {
+            this.pendingStart = true;
+            return Promise.resolve();
+        }
+    }
+
+    /**
+     * Check if the terminal is ready
+     * @returns {boolean}
+     */
+    isReady() {
+        return this.hasInitialized;
+    }
+
+    /**
+     * Destroy the lazy loading manager
+     */
+    destroy() {
+        if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
+        }
+    }
+}
+
 /**
  * Main Obsidian Termynal Class - orchestrates all components
  * Provides the primary API and coordinates between all subsystems
@@ -971,6 +1189,7 @@ class ObsidianTermynal {
         this.events = new TermynalEventManager(this);
         this.renderer = new TermynalRenderer(this);
         this.animator = new TermynalAnimator(this);
+        this.lazyManager = new LazyLoadingManager(this);
         
         // Initialize animation state
         this.state = { 
@@ -982,7 +1201,8 @@ class ObsidianTermynal {
             pauseStart: 0,                 // When current pause started
             restarting: false,             // Is animation restarting
             processedLines: new Set(),     // Set of already processed line IDs
-            lineQueue: this.generateLineQueue()  // Queue of lines to process
+            lineQueue: this.generateLineQueue(),  // Queue of lines to process
+            isLazyLoaded: false            // Is the terminal lazy loaded
         };
         
         // Initialize timing configuration with original values backup
@@ -1004,12 +1224,19 @@ class ObsidianTermynal {
     }
 
     /**
-     * Initialize the terminal instance
+     * Initialize the terminal instance by setting up styles and container.
+     * If lazy loading is enabled, initialize the lazy loading manager;
+     * otherwise, proceed with standard setup and start the animation if autoStart is enabled.
      */
     init() {
         TermynalStyleManager.initializeStyles();
-        this.setupContainer();
-        this.config.autoStart ? this.start() : this.renderer.renderStartButton();
+        
+        if (this.config.lazyLoading) {
+            this.lazyManager.init();
+        } else {
+            this.setupContainer();
+            this.config.autoStart ? this.start() : this.renderer.renderStartButton();
+        }
     }
 
     /**
@@ -1065,6 +1292,12 @@ class ObsidianTermynal {
             [`data-ty-${this.config.theme}`]: '', 
             'data-termynal-setup': 'true'
         };
+
+        // Add lazy loading attribute
+        if (this.config.lazyLoading) {
+            attrs['data-lazy-loading'] = 'true';
+        }
+
         Object.entries(attrs).forEach(([k, v]) => this.container.setAttribute(k, v));
         
         // Apply custom styling
@@ -1190,6 +1423,11 @@ class ObsidianTermynal {
      * @returns {Promise} Promise that resolves when animation completes
      */
     async start() {
+        // Lazy loading check
+        if (this.config.lazyLoading && !this.lazyManager.isReady()) {
+            return this.lazyManager.scheduleStart();
+        }
+
         // Prevent multiple simultaneous starts
         if (this.state.isRunning && !this.state.restarting) return;
 
@@ -1207,7 +1445,8 @@ class ObsidianTermynal {
             currentLine: 0, 
             startTime: Date.now(), 
             pausedTime: 0, 
-            restarting: false 
+            restarting: false,
+            isLazyLoaded: this.config.lazyLoading
         });
         
         try {
@@ -1219,7 +1458,7 @@ class ObsidianTermynal {
             this.state.isRunning = false;
             this.emit('complete', { 
                 totalLines: this.config.lines.length, 
-                duration: this.getElapsed() 
+                duration: this.getElapsed()
             });
             
             // Handle looping if enabled
@@ -1589,6 +1828,11 @@ class ObsidianTermynal {
         // Clear all active timers
         this.timers.clearAll();
         this.state.isRunning = false;
+
+        // Destroy lazy loading manager
+        if (this.lazyManager) {
+            this.lazyManager.destroy();
+        }
         
         // Remove DOM observer if present
         if (this.domCache && this.domCache.observer) {
@@ -1613,6 +1857,7 @@ class ObsidianTermynal {
             this.container.innerHTML = '';
             this.container.removeAttribute('data-termynal-instance');
             this.container.removeAttribute('data-termynal-global-id');
+            this.container.removeAttribute('data-lazy-loading');
         }
         
         return true;
@@ -1700,6 +1945,31 @@ class ObsidianTermynal {
                 if (this.timing[key] !== undefined) this.timing[key] = value;
                 return this.getAPI();
             },
+
+            // ==================== LAZY LOADING ====================
+
+            /** Check if lazy loading is enabled */
+            isLazyLoaded: () => this.config.lazyLoading,
+
+            /** Check if lazy loading is ready */
+            isLazyReady: () => this.lazyManager ? this.lazyManager.isReady() : true,
+
+            /** Force lazy loading and initialize the terminal */
+            forceLazyLoad: () => {
+                if (this.lazyManager && !this.lazyManager.isReady()) {
+                    return this.lazyManager.initializeTerminal();
+                }
+                return Promise.resolve();
+            },
+
+            /** Get lazy loading information */
+            getLazyLoadingInfo: () => ({
+                enabled: this.config.lazyLoading,
+                ready: this.lazyManager ? this.lazyManager.isReady() : true,
+                threshold: this.config.intersectionThreshold,
+                rootMargin: this.config.rootMargin,
+                linesCount: this.config.lines.length
+            }),
             
             // ==================== LINE MANAGEMENT ====================
             
@@ -1836,7 +2106,9 @@ class ObsidianTermynal {
                 activeTimers: this.timers.getActiveCount(),
                 cacheSize: this.domCache.getCacheSize(),
                 processedLines: this.state.processedLines.size,
-                instanceId: this.instanceId
+                instanceId: this.instanceId,
+                lazyLoading: this.config.lazyLoading,
+                lazyReady: this.lazyManager ? this.lazyManager.isReady() : true
             })
         };
     }
