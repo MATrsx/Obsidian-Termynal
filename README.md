@@ -33,7 +33,7 @@
 </p>
 
 <p align="center">
-    <img src="docs/assets/img/showcase.gif" style="border-radius: 8px">
+    <img src="assets/img/showcase.gif" style="border-radius: 8px">
 </p>
 
 > Performance-optimized terminal animations for Obsidian DataviewJS  
@@ -52,6 +52,7 @@ A highly optimized terminal animation library designed specifically for Obsidian
 - **Performance Optimized** - Efficient rendering with DOM caching and batch processing
 
 ### Advanced Features
+- **Lazy Loading** - Load terminals only when they become visible in the viewport
 - **Syntax Highlighting** - Basic code syntax highlighting support
 - **Event System** - Hook into animation events for custom behavior
 - **Fullscreen Mode** - Expand terminal to fullscreen view
@@ -166,6 +167,14 @@ await dv.view('termynal', {
 | `copyable` | boolean | `false` | Show copy button |
 | `resizable` | boolean | `false` | Allow terminal resizing |
 | `fullscreen` | boolean | `false` | Show fullscreen button |
+
+### Lazy Loading Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `lazyLoading` | boolean | `false` | Enable lazy loading (load only when visible) |
+| `intersectionThreshold` | number | `0.1` | Visibility threshold for lazy loading (0.0 to 1.0) |
+| `rootMargin` | string | `'50px'` | Root margin for intersection observer |
 
 ### Prompt Configuration
 
@@ -310,6 +319,26 @@ api.setTiming({
 })
 ```
 
+### Lazy Loading Methods
+```javascript
+// Check if lazy loading is enabled
+const isLazy = api.isLazyLoaded()
+
+// Check if lazy loaded terminal is ready
+const isReady = api.isLazyReady()
+
+// Force lazy loading initialization
+await api.forceLazyLoad()
+
+// Get lazy loading information
+const lazyInfo = api.getLazyLoadingInfo()
+console.log('Lazy loading enabled:', lazyInfo.enabled)
+console.log('Ready:', lazyInfo.ready)
+console.log('Threshold:', lazyInfo.threshold)
+console.log('Root margin:', lazyInfo.rootMargin)
+console.log('Lines count:', lazyInfo.linesCount)
+```
+
 ### Line Management
 ```javascript
 // Add single line
@@ -345,17 +374,18 @@ api.off('start', callback)
 
 ### Available Events
 
-| Event  | Description  |
-|:---:|:---:|
-| `start` | Animation started |
-| `complete` | Animation completed |
-| `pause` | Animation paused |
-| `resume` | Animation resumed |
-| `stop` | Animation stopped |
-| `lineStart` | Line animation started |
-| `lineComplete` | Line animation completed |
-| `lineError` | Error in line processing |
-| `error` | General error occurred |
+| Event  | Description  | Data Properties |
+|:---:|:---:|:---:|
+| `start` | Animation started | `config` |
+| `complete` | Animation completed | `totalLines`, `duration` |
+| `pause` | Animation paused | `currentLine` |
+| `resume` | Animation resumed | `currentLine` |
+| `stop` | Animation stopped | `currentLine` |
+| `lazyLoaded` | Terminal lazy loaded | `linesCount`, `timestamp` |
+| `lineStart` | Line animation started | `lineIndex`, `lineData` |
+| `lineComplete` | Line animation completed | `lineIndex`, `lineData` |
+| `lineError` | Error in line processing | `lineIndex`, `lineData`, `error` |
+| `error` | General error occurred | `error`, `currentLine` |
 
 ## 🎨 Themes
 
@@ -414,6 +444,7 @@ You can customize the appearance using CSS variables:
 - **Instance Registry** - Prevent duplicate initializations
 - **Timer Management** - Robust timer cleanup and management
 - **Memory Management** - Efficient cleanup on destroy
+- **Lazy Loading** - Load terminals only when needed
 
 ### Performance Monitoring
 ```javascript
@@ -421,6 +452,8 @@ const perfInfo = api.getPerformanceInfo()
 console.log('Active timers:', perfInfo.activeTimers)
 console.log('Cache size:', perfInfo.cacheSize)
 console.log('Processed lines:', perfInfo.processedLines)
+console.log('Lazy loading enabled:', perfInfo.lazyLoading)
+console.log('Lazy ready:', perfInfo.lazyReady)
 ```
 
 ## 🐛 Troubleshooting
@@ -431,6 +464,13 @@ console.log('Processed lines:', perfInfo.processedLines)
 - Check if DataviewJS is enabled
 - Verify JavaScript execution is allowed
 - Check browser console for errors
+
+### Lazy Loading Not Working
+
+- Verify `lazyLoading: true` is set in configuration
+- Check if the terminal container is within the viewport
+- Adjust `intersectionThreshold` and `rootMargin` if needed
+- Use browser developer tools to inspect intersection observer
 
 #### Animation resets after short time
 - Set the Dataview `Refresh interval` setting to a higher number (in ms)
@@ -505,6 +545,7 @@ await dv.view('termynal', {
 await dv.view('termynal', {
     title: 'Package Manager',
     theme: 'macos',
+    lazyLoading: true,
     showControls: true,
     copyable: true,
     lines: [
@@ -528,6 +569,6 @@ await dv.view('termynal', {
 
 ---
 
-**Version**: 0.0.1  
+**Version**: 0.1.0
 **Author**: MATrsx  
 **Based on**: [Termynal.js](https://github.com/ines/termynal) by Ines Montani
