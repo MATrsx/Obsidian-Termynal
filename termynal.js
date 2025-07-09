@@ -62,7 +62,23 @@ class TermynalStyleManager {
         const style = document.createElement('style');
         style.id = styleId;
         style.textContent = `
+            /* CSS Custom Properties (Design Tokens) */
+            :root {
+                --terminal-font-family: 'Roboto Mono', 'Fira Mono', Consolas, Menlo, Monaco, 'Courier New', Courier, monospace;
+                --terminal-border-radius: 8px;
+                --terminal-padding: 20px;
+                --terminal-line-height: 1.8;
+                --terminal-font-size: 14px;
+                --terminal-min-height: 200px;
+                --terminal-box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                --terminal-transition: all 0.2s ease;
+                --terminal-button-padding: 4px 8px;
+                --terminal-button-radius: 4px;
+            }
+
+            /* Main Terminal Container */
             .obsidian-termynal {
+                /* Color Scheme - Default (Dark Theme) */
                 --color-bg: #252a33;
                 --color-text: #eee;
                 --color-text-subtle: #a2a2a2;
@@ -72,39 +88,47 @@ class TermynalStyleManager {
                 --color-success: #51cf66;
                 --color-comment: #4a968f;
                 
+                /* Layout */
                 max-width: 100%;
                 overflow-x: auto;
                 background: var(--color-bg);
                 color: var(--color-text);
-                font-size: 14px;
-                font-family: 'Roboto Mono', 'Fira Mono', Consolas, Menlo, Monaco, 'Courier New', Courier, monospace;
-                border-radius: 8px;
-                padding: 75px 20px 20px;
+                font-size: var(--terminal-font-size);
+                font-family: var(--terminal-font-family);
+                border-radius: var(--terminal-border-radius);
+                padding: 75px var(--terminal-padding) var(--terminal-padding);
                 position: relative;
                 box-sizing: border-box;
                 margin: 1em 0;
-                min-height: 200px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                min-height: var(--terminal-min-height);
+                box-shadow: var(--terminal-box-shadow);
             }
-            /* Theme variations */
+
+            /* Theme Variations */
             .obsidian-termynal[data-theme="light"] {
                 --color-bg: #ffffff;
                 --color-text: #333333;
                 --color-text-subtle: #666666;
                 border: 1px solid #e0e0e0;
             }
+
             .obsidian-termynal[data-theme="ubuntu"] {
                 --color-bg: #300a24;
                 --color-text: #ffffff;
                 --color-accent: #e95420;
             }
-            /* Window decorations */
-            .obsidian-termynal[data-ty-macos]:before {
-                content: '';
+
+            /* Window Decorations - Base Styles */
+            .obsidian-termynal::before {
                 position: absolute;
                 top: 15px;
                 left: 15px;
                 display: inline-block;
+            }
+
+            /* macOS Style Window Controls */
+            .obsidian-termynal[data-ty-macos]::before {
+                content: '';
                 width: 15px;
                 height: 15px;
                 border-radius: 50%;
@@ -112,27 +136,33 @@ class TermynalStyleManager {
                 box-shadow: 25px 0 0 #f4c025, 50px 0 0 #3ec930;
             }
 
-            .obsidian-termynal[data-ty-windows]:before {
-                content: '';
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                display: inline-block;
-                width: 15px;
-                height: 15px;
-                background: #d9515d;
-                box-shadow: -25px 0 0 #e6e6e6, -50px 0 0 #e6e6e6;
+            /* Windows Style Window Controls */
+            .obsidian-termynal[data-ty-windows]::before {
+                content: '➖ ⬜ ❌';
+                top: 8px;
+                right: 12px;
+                left: auto;
+                width: auto;
+                height: 32px;
+                background: linear-gradient(to right, #666 0%, #666 66%, #dc3545 66%, #dc3545 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                font-size: 12px;
+                line-height: 32px;
+                letter-spacing: 8px;
             }
-            .obsidian-termynal[data-ty-ubuntu]:before {
+
+            /* Ubuntu Style Window Controls */
+            .obsidian-termynal[data-ty-ubuntu]::before {
                 content: '●';
-                position: absolute;
                 top: 5px;
-                left: 15px;
                 color: var(--color-accent);
                 font-size: 20px;
             }
 
-            .obsidian-termynal:after {
+            /* Terminal Title Bar */
+            .obsidian-termynal::after {
                 content: attr(data-ty-title);
                 position: absolute;
                 color: var(--color-text-subtle);
@@ -141,7 +171,8 @@ class TermynalStyleManager {
                 width: 100%;
                 text-align: center;
             }
-            /* Controls */
+
+            /* Control Buttons Container */
             .termynal-controls {
                 position: absolute;
                 top: 35px;
@@ -149,51 +180,48 @@ class TermynalStyleManager {
                 display: flex;
                 gap: 10px;
             }
-            .obsidian-termynal[data-ty-windows] .termynal-controls {
-                top: 45px;
-            }
-            .obsidian-termynal[data-ty-macos] .termynal-controls {
-                top: 45px;
-            }
+
+            .obsidian-termynal[data-ty-windows] .termynal-controls,
+            .obsidian-termynal[data-ty-macos] .termynal-controls,
             .obsidian-termynal[data-ty-ubuntu] .termynal-controls {
                 top: 45px;
             }
 
-            button[data-terminal-control] {
+            /* Button Styling - Common Styles */
+            button[data-terminal-control],
+            .termynal-start-button {
                 color: #aebbff;
                 background: none !important;
                 border: none;
-                padding: 4px 8px !important;
+                padding: var(--terminal-button-padding) !important;
                 cursor: pointer;
                 box-shadow: none !important;
-                border-radius: 4px;
+                border-radius: var(--terminal-button-radius);
                 font-size: 11px;
-                transition: all 0.2s ease;
+                transition: var(--terminal-transition);
             }
 
+            /* Control Button Hover Effects */
             button[data-terminal-control]:hover {
                 color: #fff;
                 background: rgba(255,255,255,0.1) !important;
-                box-shadow: none !important;
             }
+
+            /* Start Button Specific Styles */
+
             .termynal-start-button {
                 display: block;
                 margin: 20px auto;
-                color: #aebbff !important;
-                background: none !important;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
                 font-family: inherit;
                 font-size: 14px;
-                transition: all 0.2s ease;
-                box-shadow: none !important;
+                border-radius: 6px;
             }
+
             .termynal-start-button:hover {
                 transform: translateY(-2px);
-                background: none !important;
             }
-            /* Progress info */
+
+            /* Progress Information Display */
             .termynal-progress-info {
                 position: absolute;
                 bottom: 10px;
@@ -203,66 +231,55 @@ class TermynalStyleManager {
                 display: flex;
                 gap: 15px;
             }
-            /* Line styling */            
+
+            /* Terminal Lines - Base Styles */
             .termynal-line {
                 display: block;
-                line-height: 1.8;
+                line-height: var(--terminal-line-height);
                 white-space: pre-wrap;
                 word-wrap: break-word;
                 flex: 1;
             }
 
-            .termynal-line:before {
+            .termynal-line::before {
                 content: '';
                 display: inline-block;
                 vertical-align: middle;
             }
 
-            .termynal-line[data-ty="input"]:before,
-            .termynal-line[data-ty-prompt]:before {
+            .termynal-line[data-ty="input"]::before,
+            .termynal-line[data-ty-prompt]::before {
                 margin-right: 0.75em;
                 color: var(--color-text-subtle);
             }
 
-            /* Prompt colors */
-            .termynal-line[data-ty-prompt-color]:before {
+            .termynal-line[data-ty-prompt-color]::before {
                 color: var(--prompt-color) !important;
             }
 
-            .termynal-line[data-ty="input"]:before {
+            .termynal-line[data-ty="input"]::before {
                 content: '$';
             }
 
-            .termynal-line[data-ty-prompt]:before {
+            .termynal-line[data-ty-prompt]::before {
                 content: attr(data-ty-prompt);
             }
 
-            .termynal-line[data-ty="output"] {
-                color: var(--color-text);
-            }
+            /* Zeilen-Typen */
+            .termynal-line[data-ty="output"] { color: var(--color-text); }
+            .termynal-line[data-ty="comment"] { color: var(--color-comment); font-style: italic; }
+            .termynal-line[data-ty="error"] { color: var(--color-error); }
+            .termynal-line[data-ty="warning"] { color: var(--color-warning); }
+            .termynal-line[data-ty="success"] { color: var(--color-success); }
 
-            .termynal-line[data-ty="comment"] {
-                color: var(--color-comment);
-                font-style: italic;
-            }
-
-            .termynal-line[data-ty="error"] {
-                color: var(--color-error);
-            }
-            .termynal-line[data-ty="warning"] {
-                color: var(--color-warning);
-            }
-
-            .termynal-line[data-ty="success"] {
-                color: var(--color-success);
-            }
-            /* Syntax highlighting */
+            /* Syntax Highlighting Colors */
             .keyword { color: #ff79c6; font-weight: bold; }
             .string { color: #f1fa8c; }
             .comment { color: #6272a4; font-style: italic; }
             .number { color: #bd93f9; }
 
-            .termynal-cursor:after {
+            /* Animated Cursor */
+            .termynal-cursor::after {
                 content: '▋';
                 font-family: monospace;
                 margin-left: 0.2em;
@@ -270,10 +287,12 @@ class TermynalStyleManager {
                 color: var(--color-accent);
             }
 
+            /* Cursor Blink Animation */
             @keyframes termynal-blink {
                 50% { opacity: 0; }
             }
-            /* Notifications */
+
+            /* Notification Messages */
             .termynal-notification {
                 position: absolute;
                 bottom: 50px;
@@ -281,27 +300,31 @@ class TermynalStyleManager {
                 background: var(--color-success);
                 color: var(--color-bg);
                 padding: 8px 12px;
-                border-radius: 4px;
+                border-radius: var(--terminal-button-radius);
                 font-size: 12px;
                 animation: slideInOut 3s ease-in-out;
             }
+
+            /* Notification Slide Animation */
             @keyframes slideInOut {
                 0%, 100% { opacity: 0; transform: translateX(100%); }
                 10%, 90% { opacity: 1; transform: translateX(0); }
             }
-            /* Fullscreen mode */
+
+            /* Fullscreen Mode */
             .obsidian-termynal:fullscreen {
                 padding: 100px 40px 40px;
                 font-size: 16px;
             }
-            /* Lazy placeholder */
+
+            /* Lazy Loading Components */
             .termynal-lazy-placeholder {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                min-height: 200px;
+                min-height: var(--terminal-min-height);
                 background: var(--color-bg);
-                border-radius: 8px;
+                border-radius: var(--terminal-border-radius);
                 border: 2px dashed var(--color-text-subtle);
                 opacity: 0.8;
                 transition: all 0.3s ease;
@@ -312,11 +335,13 @@ class TermynalStyleManager {
                 border-color: var(--color-accent);
             }
 
+            /* Lazy Loading Content */
             .termynal-lazy-content {
                 text-align: center;
                 color: var(--color-text-subtle);
             }
 
+            /* Lazy Loading Icon */
             .termynal-lazy-icon {
                 font-size: 48px;
                 margin-bottom: 16px;
@@ -324,6 +349,7 @@ class TermynalStyleManager {
                 animation: termynal-lazy-pulse 2s infinite;
             }
 
+            /* Lazy Loading Text */
             .termynal-lazy-text {
                 font-size: 16px;
                 font-weight: 500;
@@ -331,27 +357,30 @@ class TermynalStyleManager {
                 color: var(--color-text);
             }
 
+            /* Lazy Loading Info Text */
             .termynal-lazy-info {
                 font-size: 12px;
                 opacity: 0.7;
             }
 
-            @keyframes termynal-lazy-pulse {
-                0%, 100% { transform: scale(1); opacity: 0.6; }
-                50% { transform: scale(1.05); opacity: 0.8; }
-            }
+            /* Lazy Loading Indicator */
 
-            /* Lazy loading animation */
             .termynal-lazy-loading {
                 position: absolute;
                 top: 10px;
                 right: 10px;
                 background: var(--color-accent);
                 color: var(--color-bg);
-                padding: 4px 8px;
-                border-radius: 4px;
+                padding: var(--terminal-button-padding);
+                border-radius: var(--terminal-button-radius);
                 font-size: 10px;
                 animation: termynal-lazy-fade 2s ease-in-out;
+            }
+
+            /* Keyframe Animations */
+            @keyframes termynal-lazy-pulse {
+                0%, 100% { transform: scale(1); opacity: 0.6; }
+                50% { transform: scale(1.05); opacity: 0.8; }
             }
 
             @keyframes termynal-lazy-fade {
@@ -360,26 +389,31 @@ class TermynalStyleManager {
                 100% { opacity: 0; transform: translateY(-10px); }
             }
 
-            /* Responsive styles */
+            /* Responsive Design - Mobile Styles */
             @media (max-width: 768px) {
                 .termynal-lazy-icon {
                     font-size: 32px;
                     margin-bottom: 12px;
                 }
+                
                 .termynal-lazy-text {
                     font-size: 14px;
                 }
+                
                 .termynal-lazy-info {
                     font-size: 11px;
                 }
+                
                 .obsidian-termynal {
                     font-size: 12px;
                     padding: 60px 15px 15px;
                 }
+                
                 .termynal-controls {
                     flex-direction: column;
                     gap: 5px;
                 }
+                
                 .termynal-progress-info {
                     flex-direction: column;
                     gap: 5px;
