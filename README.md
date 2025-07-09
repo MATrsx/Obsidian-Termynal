@@ -74,7 +74,7 @@ A highly optimized terminal animation library designed specifically for Obsidian
    - Enable the plugin and turn on "Enable JavaScript Queries"
 
 2. **Add the Script**:
-   - Download the `termynal.js` file from the [obsidian-termynal](https://github.com/MATrsx/Obsidian-Termynal) GitHub repository
+   - Download the [`termynal.js`](https://github.com/MATrsx/Obsidian-Termynal/blob/main/termynal.js) file
    - Add the script to your vault (e.g. your `assets` directory)
    - Add a DataviewJS code block in your note (see usage examples below)
 
@@ -110,10 +110,12 @@ await dv.view('termynal', {
     lineDelay: 1000,
     autoStart: false,
     loop: true,
-    showControls: true,
     highlightSyntax: true,
-    copyable: true,
-    fullscreen: true,
+    controlButtons: {
+        pause: false,
+        copy: true,
+        fullscreen: true
+    },
     height: '400px',
     lines: [
         { 
@@ -162,11 +164,18 @@ await dv.view('termynal', {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `showControls` | boolean | `true` | Show control buttons |
 | `highlightSyntax` | boolean | `false` | Enable basic syntax highlighting |
-| `copyable` | boolean | `false` | Show copy button |
 | `resizable` | boolean | `false` | Allow terminal resizing |
-| `fullscreen` | boolean | `false` | Show fullscreen button |
+
+### Control Buttons Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `controlButtons.speed` | boolean | `true` | Show speed toggle button |
+| `controlButtons.pause` | boolean | `true` | Show pause/resume button |
+| `controlButtons.restart` | boolean | `true` | Show restart button |
+| `controlButtons.copy` | boolean | `false` | Show copy content button |
+| `controlButtons.fullscreen` | boolean | `false` | Show fullscreen toggle button |
 
 ### Lazy Loading Configuration
 
@@ -300,6 +309,30 @@ api.setSpeed(true)   // Set fast speed
 api.setSpeed(false)  // Set normal speed
 ```
 
+### Control Button Management
+```javascript
+// Get current control buttons configuration
+api.getControlButtons()
+
+// Set multiple control buttons at once
+api.setControlButtons({
+    speed: true,
+    pause: false,
+    restart: true,
+    copy: false,
+    fullscreen: false
+})
+
+// Enable a specific control button
+api.enableButton('copy')
+
+// Disable a specific control button
+api.disableButton('fullscreen')
+
+// Toggle a control button state
+api.toggleButton('speed')
+```
+
 ### Status Methods
 ```javascript
 api.isRunning()      // Returns boolean
@@ -424,6 +457,19 @@ api.off('start', callback)
 You can customize the appearance using CSS variables:
 
 ```css
+:root {
+    --terminal-font-family: 'Roboto Mono', 'Fira Mono', Consolas, Menlo, Monaco, 'Courier New', Courier, monospace;
+    --terminal-border-radius: 8px;
+    --terminal-padding: 20px;
+    --terminal-line-height: 1.8;
+    --terminal-font-size: 14px;
+    --terminal-min-height: 200px;
+    --terminal-box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    --terminal-transition: all 0.2s ease;
+    --terminal-button-padding: 4px 8px;
+    --terminal-button-radius: 4px;
+}
+
 .obsidian-termynal {
     --color-bg: #1a1a1a;
     --color-text: #ffffff;
@@ -465,7 +511,13 @@ console.log('Lazy ready:', perfInfo.lazyReady)
 - Verify JavaScript execution is allowed
 - Check browser console for errors
 
-### Lazy Loading Not Working
+#### Note Corruption with Multi-line Output
+- Note becomes corrupted and shows `Failed to open ""` Notice after reload
+- Quick fix: Open file with external text editor, remove DataviewJS block, save
+- Avoid using `\n` separators for multi-line output
+- Use individual objects in `lines` array instead
+
+#### Lazy Loading Not Working
 
 - Verify `lazyLoading: true` is set in configuration
 - Check if the terminal container is within the viewport
@@ -546,8 +598,9 @@ await dv.view('termynal', {
     title: 'Package Manager',
     theme: 'macos',
     lazyLoading: true,
-    showControls: true,
-    copyable: true,
+    controlButtons: {
+        copy: true
+    },
     lines: [
         { type: 'input', text: 'npm init -y' },
         { type: 'output', text: 'Wrote to package.json' },
@@ -569,6 +622,6 @@ await dv.view('termynal', {
 
 ---
 
-**Version**: 0.1.0
+**Version**: 0.1.1  
 **Author**: MATrsx  
 **Based on**: [Termynal.js](https://github.com/ines/termynal) by Ines Montani
