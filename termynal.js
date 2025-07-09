@@ -6,7 +6,7 @@
  * │ Based on Termynal.js by Ines Montani (https://github.com/ines/termynal) │
  * ╰─────────────────────────────────────────────────────────────────────────╯
  * 
- * @version     0.0.1
+ * @version     0.1.1
  * @author      MATrsx 
  * @requires    Obsidian DataviewJS
  * @license     MIT
@@ -22,11 +22,15 @@ const DEFAULT_CONFIG = {
     cursor: '▋',                       // Cursor character
     autoStart: true,                    // Start animation automatically
     loop: false,                        // Loop animation when finished
-    showControls: true,                 // Show control buttons
     highlightSyntax: false,             // Enable syntax highlighting
-    copyable: false,                    // Enable copy functionality
     resizable: false,                   // Allow terminal resizing
-    fullscreen: false,                  // Enable fullscreen mode
+    controlButtons: {
+        speed: true,        // Speed toggle button
+        pause: true,        // Pause/Resume button  
+        restart: true,      // Restart button
+        copy: false,        // Copy content button
+        fullscreen: false   // Fullscreen toggle button
+    },
     defaultPrompt: '$',                 // Default prompt character
     defaultPromptColor: '#a2a2a2',      // Default prompt color
     height: 'auto',                     // Terminal height
@@ -705,6 +709,8 @@ class TermynalRenderer {
      * Render the start button for manual animation triggering
      */
     renderStartButton() {
+        if (this.termynal.config.autoStart) return;
+
         const btn = this.termynal.$('button', {
             className: 'termynal-start-button',
             innerHTML: '▶ Start Terminal Animation',
@@ -715,42 +721,116 @@ class TermynalRenderer {
             }
         });
         this.termynal.container.appendChild(btn);
-        this.domCache.set('startButton', btn);
     }
 
     /**
-     * Render control buttons (speed, pause, restart, etc.)
+     * Render interactive controls for the terminal
+     * If the activeButtons array is empty, this function does nothing
      */
     renderControls() {
-        if (!this.termynal.config.showControls) return;
-        
-        const controls = this.termynal.$('div', { className: 'termynal-controls' });
-        const buttons = new Map();
-        
-        // Define button configurations
-        const btnConfigs = [
-            ['speed', 'fast →'],
-            ['pause', 'pause ⏸'],
-            ['restart', 'restart ↻'],
-            ...(this.termynal.config.copyable ? [['copy', 'copy ⎘']] : []),
-            ...(this.termynal.config.fullscreen ? [['fullscreen', 'fullscreen ⛶']] : [])
-        ];
-        
-        // Create and append buttons
-        btnConfigs.forEach(([id, text]) => {
-            const btn = this.termynal.$('button', {
-                innerHTML: text, 
-                'data-terminal-control': id,
-                onclick: e => { e.preventDefault(); this.events.handleControlClick.bind(this, id)(); }
-            });
-            controls.appendChild(btn);
-            buttons.set(id, btn);
+        const existingControls = this.domCache.get('.termynal-controls');
+        if (existingControls) existingControls.remove();
+
+        const controlsContainer = this.termynal.$('div', { 
+            className: 'termynal-controls' 
+        });
+
+        const buttonConfigs = this.getButtonConfigs();
+        const activeButtons = this.getActiveButtons(buttonConfigs);
+
+        if (activeButtons.length === 0) return;
+
+        activeButtons.forEach(({ key, config }) => {
+            const button = this.createControlButton(key, config);
+            if (button) {
+                controlsContainer.appendChild(button);
+                this.termynal.elements.set(key, button);
+            }
+        });
+
+        this.termynal.container.appendChild(controlsContainer);
+        this.domCache.set('.termynal-controls', controlsContainer);
+    }
+
+    /**
+     * Returns a configuration object for control buttons in the terminal.
+     * Each key in the object represents a control button and maps to an
+     * object containing the button's text, title, and action.
+     *
+     * - `speed`: Toggles the animation speed.
+     * - `pause`: Pauses or resumes the animation.
+     * - `restart`: Restarts the animation.
+     * - `copy`: Copies the terminal content.
+     * - `fullscreen`: Toggles fullscreen mode.
+     *
+     * @returns {Object} Configuration object for terminal control buttons.
+     */
+    getButtonConfigs() {
+        return {
+            speed: {
+                text: 'fast →',
+                title: 'Toggle animation speed',
+                action: () => this.termynal.toggleSpeed()
+            },
+            pause: {
+                text: 'pause ⏸',
+                title: 'Pause/Resume animation',
+                action: () => this.termynal.togglePause()
+            },
+            restart: {
+                text: 'restart ↻',
+                title: 'Restart animation',
+                action: () => this.termynal.restart()
+            },
+            copy: {
+                text: 'copy ⎘',
+                title: 'Copy terminal content',
+                action: () => this.termynal.copyContent()
+            },
+            fullscreen: {
+                text: 'fullscreen ⛶',
+                title: 'Toggle fullscreen',
+                action: () => this.termynal.toggleFullscreen()
+            }
+        };
+    }
+
+    /**
+     * Returns an array of active control buttons. Each button is an object
+     * with two properties: 'key' and 'config'. 'key' is a string identifier
+     * for the button and 'config' is the configuration object for the button
+     * from the 'buttonConfigs' parameter.
+     *
+     * Only buttons with 'enabled' set to true in the 'controlButtons'
+     * configuration will be included in the returned array.
+     *
+     * @param {Object<string, { text: string, title: string, action: () => void }>} buttonConfigs
+     * @return {Array<{ key: string, config: { text: string, title: string, action: () => void } }>}
+     */
+    getActiveButtons(buttonConfigs) {
+        return Object.entries(this.termynal.config.controlButtons)
+            .filter(([key, enabled]) => enabled && buttonConfigs[key])
+            .map(([key]) => ({ key, config: buttonConfigs[key] }));
+    }
+
+    /**
+     * Creates a control button element for the terminal.
+     * @param {string} key - Identifier for the control button.
+     * @param {Object} config - Configuration object for the button.
+     * @param {string} config.text - Text content of the button.
+     * @param {string} config.title - Tooltip text for the button.
+     * @param {Function} config.action - Function to execute on button click.
+     * @returns {Element} The created button element.
+     */
+    createControlButton(key, config) {
+        const button = this.termynal.$('button', {
+            textContent: config.text,
+            title: config.title,
+            'data-terminal-control': key,
+            onclick: config.action
         });
         
-        this.termynal.container.appendChild(controls);
-        this.termynal.elements.set('controls', controls);
-        this.termynal.elements.set('buttons', buttons);
-        this.domCache.set('controls', controls);
+        return button;
     }
 
     /**
@@ -764,7 +844,7 @@ class TermynalRenderer {
         
         this.termynal.container.appendChild(info);
         this.termynal.elements.set('progressInfo', info);
-        this.domCache.set('progressInfo', info);
+        this.domCache.set('.termynal-progress-info', info);
         
         // Start progress timer
         this.termynal.timers.setTimer(() => {
@@ -826,10 +906,10 @@ class TermynalRenderer {
      * @param {string} buttonId - Button identifier
      * @param {string} newText - New button text
      */
-    updateButton(buttonId, newText) {
-        const buttons = this.termynal.elements.get('buttons');
-        if (buttons && buttons.has(buttonId)) {
-            buttons.get(buttonId).innerHTML = newText;
+    updateButton(key, newText) {
+        const button = this.termynal.elements.get(key);
+        if (button) {
+            button.textContent = newText;
         }
     }
 
@@ -837,22 +917,23 @@ class TermynalRenderer {
      * Reset all control buttons to their default text
      */
     resetButtons() {
-        const buttons = this.termynal.elements.get('buttons');
-        if (!buttons) return;
+        const buttonConfigs = this.getButtonConfigs();
         
-        const defaultTexts = {
-            'speed': 'fast →',
-            'pause': 'pause ⏸',
-            'restart': 'restart ↻',
-            'copy': 'copy 📋',
-            'fullscreen': 'fullscreen ⛶'
-        };
+        // Reset speed button
+        if (this.termynal.elements.has('speed')) {
+            this.updateButton('speed', buttonConfigs.speed.text);
+        }
         
-        buttons.forEach((btn, id) => {
-            if (defaultTexts[id]) {
-                btn.innerHTML = defaultTexts[id];
-            }
-        });
+        // Reset pause button
+        if (this.termynal.elements.has('pause')) {
+            this.updateButton('pause', buttonConfigs.pause.text);
+        }
+        
+        // Fullscreen button text updates based on state
+        if (this.termynal.elements.has('fullscreen')) {
+            const isFullscreen = document.fullscreenElement;
+            this.updateButton('fullscreen', isFullscreen ? 'exit ⛶' : 'fullscreen ⛶');
+        }
     }
 
     /**
@@ -879,11 +960,11 @@ class TermynalRenderer {
      * Ensure UI elements are rendered once (idempotent)
      */
     renderOnce() {
-        if (!this.termynal.container.querySelector('.termynal-controls')) {
+        if (!this.domCache.get('.termynal-controls')) {
             this.renderControls();
         }
         
-        if (!this.termynal.container.querySelector('.termynal-progress-info')) {
+        if (!this.domCache.get('.termynal-progress-info')) {
             this.renderProgressInfo();
         }
     }
@@ -1140,8 +1221,6 @@ class LazyLoadingManager {
         if (this.hasInitialized) return;
 
         this.hasInitialized = true;
-
-        console.log("Terminal initialisiert");
         
         const placeholder = this.termynal.domCache.get('placeholder');
         if (placeholder) {
@@ -1209,6 +1288,13 @@ class ObsidianTermynal {
     constructor(options) {
         this.container = dv.container;
         this.config = { ...DEFAULT_CONFIG, ...options };
+        if (options && options.controlButtons) {
+            this.config.controlButtons = { 
+                ...DEFAULT_CONFIG.controlButtons, 
+                ...options.controlButtons 
+            };
+        }
+
         this.instanceId = this.generateInstanceId();
         
         // Prevent duplicate initialization
@@ -1761,13 +1847,18 @@ class ObsidianTermynal {
     }
 
     /**
-     * Toggles fullscreen mode for the terminal
-     * Uses native fullscreen API with error handling
+     * Toggles fullscreen mode of the terminal
+     * Enters fullscreen mode if not currently in it, otherwise exits
      */
     toggleFullscreen() {
         const el = document.fullscreenElement ? document : this.container;
         const action = document.fullscreenElement ? 'exitFullscreen' : 'requestFullscreen';
-        el[action]().catch(err => console.error('Fullscreen error:', err));
+        el[action]().then(() => {
+            if (this.elements.has('fullscreen')) {
+                const isFullscreen = document.fullscreenElement;
+                this.renderer.updateButton('fullscreen', isFullscreen ? 'exit ⛶' : 'fullscreen ⛶');
+            }
+        }).catch(err => console.error('Fullscreen error:', err));
     }
 
     /**
@@ -1937,6 +2028,62 @@ class ObsidianTermynal {
                 const isFast = this.timing.typeDelay === 0;
                 if (fast && !isFast) this.toggleSpeed();
                 else if (!fast && isFast) this.toggleSpeed();
+            },
+
+            // ==================== CONTROL BUTTONS ====================
+
+            /**
+             * Sets the configuration for control buttons and re-renders the controls.
+             * Merges the existing control button configuration with the provided
+             * button configuration, updating any existing buttons or adding new ones.
+             *
+             * @param {Object} buttonConfig - An object where each key is a button
+             * name and the value is a boolean indicating if the button should be
+             * enabled.
+             */
+            setControlButtons: (buttonConfig) => {
+                this.config.controlButtons = { 
+                    ...this.config.controlButtons, 
+                    ...buttonConfig 
+                };
+                this.renderer.renderControls();
+            },
+
+            /** Get current control buttons configuration */
+            getControlButtons: () => ({ ...this.config.controlButtons }),
+
+            /**
+             * Enable a control button
+             * @param {string} buttonName - Name of the button to enable
+             */
+            enableButton: (buttonName) => {
+                if (this.config.controlButtons.hasOwnProperty(buttonName)) {
+                    this.config.controlButtons[buttonName] = true;
+                    this.renderer.renderControls();
+                }
+            },
+
+            /**
+             * Disable a control button
+             * @param {string} buttonName - Name of the button to disable
+             */
+            disableButton: (buttonName) => {
+                if (this.config.controlButtons.hasOwnProperty(buttonName)) {
+                    this.config.controlButtons[buttonName] = false;
+                    this.renderer.renderControls();
+                }
+            },
+
+            /**
+             * Toggles the enabled state of a control button.
+             * If the button is currently enabled, it will be disabled, and vice versa.
+             * @param {string} buttonName - Name of the button to toggle
+             */
+            toggleButton: (buttonName) => {
+                if (this.config.controlButtons.hasOwnProperty(buttonName)) {
+                    this.config.controlButtons[buttonName] = !this.config.controlButtons[buttonName];
+                    this.renderer.renderControls();
+                }
             },
             
             // ==================== STATUS METHODS ====================
